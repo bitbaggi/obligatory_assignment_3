@@ -8,35 +8,61 @@
 
 void read_graph(const char* filename, struct Edge** edges, int* n, int* e)
 {
+    printf("Start - Read file content into graph structure\n");
     FILE* fptr = fopen(filename, "r");
-    fscanf(fptr, "%d", n);
-    fscanf(fptr, "%d", e);
-    *edges = (Edge*)malloc(*e * sizeof(struct Edge));
+    if (!fptr)
+    {
+        printf("Tried to read %s", filename);
+        perror("Error opening file");
+        exit(1);
+    }
+
+    char line[256];
+    do
+    {
+        if (!fgets(line, sizeof(line), fptr))
+        {
+            printf("Error reading file\n");
+            exit(1);
+        }
+    }
+    while (line[0] == '%');
+
+    int rows, cols;
+    if (sscanf(line, "%d %d", &rows, &cols) != 2)
+    {
+        printf("Error reading matrix size\n");
+        exit(1);
+    }
+    *n = rows;
+    *e = cols;
+    *edges = (struct Edge*) malloc(*e * sizeof(struct Edge));
+    if (!*edges)
+    {
+        printf("Memory allocation failed\n");
+        exit(1);
+    }
+
     for (int i = 0; i < *e; i++)
     {
-        struct Edge edge;
-        fscanf(fptr, "%d", &edge.src);
-        fscanf(fptr, "%d", &edge.dest);
-        fscanf(fptr, "%d", &edge.weight);
-        (*edges)[i] = edge;
+        int u, v, w = 1;
+        if (fscanf(fptr, "%d %d %d", &u, &v, &w) < 2)
+        {
+            printf("Error reading edge %d\n", i);
+            exit(1);
+        }
+        (*edges)[i].src = u;
+        (*edges)[i].dest = v;
+        (*edges)[i].weight = w;
     }
+
+    fclose(fptr);
+    printf("End - Read file content into graph structure\n");
 }
 
-// compare two arrays for equality
-void verify(int** bf_dist, int** fw_dist, int nodeCount)
+void writeResults(const int n, const int e, const double elapsedTime, const char* filename)
 {
-    int errors = 0;
-    for (int i = 0; i < nodeCount; i++)
-        for (int j = 0; j < nodeCount; j++)
-            if (bf_dist[i][j] != fw_dist[i][j])
-            {
-                printf("Error at [%d][%d]: BF=%d, FW=%d\n",
-                    i, j, bf_dist[i][j], fw_dist[i][j]);
-                errors++;
-            }
-
-    if (errors == 0)
-        printf("Correct \n");
-    else
-        printf("%d errors\n", errors);
+    FILE* resultFile = fopen(filename, "a");
+    fprintf(resultFile, "%d  %d  %f\n", n, e, elapsedTime);
+    fclose(resultFile);
 }

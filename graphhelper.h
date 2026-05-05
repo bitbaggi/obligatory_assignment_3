@@ -6,3 +6,4 @@
 
 void read_graph(const char* filename, struct Edge** edges, int* n, int* e);
 void verify(int** bf_dist, int** fw_dist, int nodeCount);
+void writeResults(int n, int e, double elapsedTime, const char* filename);
