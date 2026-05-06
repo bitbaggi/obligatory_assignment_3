@@ -4,7 +4,9 @@
 #include <sys/time.h>
 
 __global__ void bellmanford_init(int n, int* d_dist_data){
-    int src = blockIdx.x;
+    int src = threadIdx.x + blockIdx.x * blockDim.x;
+    if (src >= n) return;
+
     int* d_dist   = d_dist_data   + src * n;
 
     for (int i = threadIdx.x; i < n; i += blockDim.x)
@@ -29,7 +31,9 @@ __device__ bool bellmanford_step(int edge_count, Edge* d_edges, int* d_dist)
 }
 __global__  void bellmanford_node(int n, int e, Edge* d_edges, int* d_dist_data)
 {
-    int src = blockIdx.x;
+    int src = threadIdx.x + blockIdx.x * blockDim.x;
+    if (src >= n) return;  // safety check
+
     int* d_dist   = d_dist_data   + src * n;
     for (int i = 0; i < n-1; i++)
        if (!bellmanford_step(e, d_edges, d_dist))
@@ -46,6 +50,10 @@ int run(int argc, char* argv[], struct Edge* edges, int n, int e)
     int* dist_data;
     cudaMallocHost((void**)&dist_data,   (size_t)n * n * sizeof(int));
     printf("End - Allocate Memory\n");
+
+    int threadsPerBlock = argc >= 5 ? atoi(argv[4]) : (e < 256) ? e : 256;
+    int numBlocks = (n + threadsPerBlock - 1) / threadsPerBlock;
+    printf("Using %d threads per block, resulting in %d blocks\n", threadsPerBlock, numBlocks);
 
 	// Meassure time with cuda
     cudaEvent_t start, stop;
@@ -70,8 +78,8 @@ int run(int argc, char* argv[], struct Edge* edges, int n, int e)
     printf("End - Allocate dist data on device\n");
 
     printf("Start - parallel bellman ford\n");
-    bellmanford_init<<<1,n>>>(n, d_dist_data);
-    bellmanford_node<<<1,n>>>(n, e, d_edges, d_dist_data);
+    bellmanford_init<<<numBlocks, threadsPerBlock>>>(n, d_dist_data);
+    bellmanford_node<<<numBlocks, threadsPerBlock>>>(n, e, d_edges, d_dist_data);
     printf("End - parallel bellman ford\n");
 
     printf("Start - Copy data from device\n");
@@ -95,9 +103,9 @@ int run(int argc, char* argv[], struct Edge* edges, int n, int e)
     // Verify correctness
     for (int src = 0; src < n; src++) {
         for (int i = 0; i < e; i++) {
-            const int u = edges[i].src;
-            const int v = edges[i].dest;
-            if (dist[src][u] != INT_MAX && dist[src][v] > dist[src][u] + edges[i].weight) {
+            struct Edge* edge = edges + i;
+            if (dist[src][edge->src] != INT_MAX &&
+                dist[src][edge->dest] > dist[src][edge->src] + edge->weight) {
                 printf("Triangle inequality violated!\n");
             }
         }

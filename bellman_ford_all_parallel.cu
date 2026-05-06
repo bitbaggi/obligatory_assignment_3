@@ -52,8 +52,8 @@ int run(int argc, char* argv[], struct Edge* edges, int n, int e)
 
 
 	// Experimental check of parallel threads
-	int threads_e = (e < 256) ? e : 256;
-	int threads_n = (n < 256) ? n : 256;
+	int threads_e = argc >= 5 ? atoi(argv[4]) : (e < 256) ? e : 256;
+	int threads_n = argc >= 5 ? atoi(argv[4]) : (n < 256) ? n : 256;
 
 	// Meassure time with cuda
     cudaEvent_t start, stop;
@@ -122,18 +122,17 @@ int run(int argc, char* argv[], struct Edge* edges, int n, int e)
     for (int i = 0; i < n; i++)
         dist[i] = dist_data + i * n;
 
-    printf("Start - Verification\n");
-    // Verify correctness
-    for (int src = 0; src < n; src++) {
-        for (int i = 0; i < e; i++) {
-            const int u = edges[i].src;
-            const int v = edges[i].dest;
-            if (dist[src][u] != INT_MAX &&
-                dist[src][v] > dist[src][u] + edges[i].weight) {
-                printf("Triangle inequality violated!\n");
-            }
-        }
-    }
+	printf("Start - Verification\n");
+	// Verify correctness
+	for (int src = 0; src < n; src++) {
+		for (int i = 0; i < e; i++) {
+            struct Edge* edge = edges + i;
+			if (dist[src][edge->src] != INT_MAX &&
+				dist[src][edge->dest] > dist[src][edge->src] + edge->weight) {
+				printf("Triangle inequality violated!\n");
+			}
+		}
+	}
     printf("End - Verification\n");
     printf("Correct!\n");
 
