@@ -46,7 +46,7 @@ void read_graph(const char* filename, struct Edge** edges, int* n, int* e)
     for (int i = 0; i < *e; i++)
     {
         int u, v, w = 1;
-        if (fscanf(fptr, "%d %d %d", &u, &v, &w) < 2)
+        if (fscanf(fptr, "%d %d %d", &u, &v, &w) < 3)
         {
             printf("Error reading edge %d\n", i);
             exit(1);

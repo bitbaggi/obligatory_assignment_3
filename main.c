@@ -9,17 +9,8 @@
 #include "bellmanford.c"
 #include "graphhelper.c"
 
-int run(int argc, char* argv[])
+int run(int argc, char* argv[], struct Edge* edges, int n, int e)
 {
-    if (argc < 2)
-    {
-        printf("Please add an argument for the graph file\n");
-        return 1;
-    }
-    struct Edge* edges;
-    int n, e;
-    read_graph(argv[1], &edges, &n, &e);
-
     printf("Start - Allocate Memory\n");
     // Allocate memory for the distance array on host machine
     int* dist_data = malloc(n * n * sizeof(int));
@@ -36,14 +27,11 @@ int run(int argc, char* argv[])
     }
     printf("End - Allocate Memory\n");
 
-
     printf("Start - BellmanFord Algorithm\n");
     const clock_t start = clock();
     for (int i = 0; i < n; i++)
     {
         bellmanFord(dist[i], edges, i, n, e);
-        // if (i % 100 == 0)
-        // printf("%d/%d done\n", i, n);
     }
     printf("End - BellmanFord Algorithm\n");
 
@@ -68,7 +56,6 @@ int run(int argc, char* argv[])
     printf("End - Verification\n");
     printf("Correct!\n");
 
-    free(edges);
     free(dist);
     free(dist_data);
 
@@ -77,6 +64,16 @@ int run(int argc, char* argv[])
 
 int main(int argc, char* argv[])
 {
+    if (argc < 2)
+    {
+        printf("Please add an argument for the graph file\n");
+        return 1;
+    }
+    // Read in the graph file
+    struct Edge* edges;
+    int n, e;
+    read_graph(argv[1], &edges, &n, &e);
+
     int runs = 0;
     if (argc == 3)
         runs = atoi(argv[2]);
@@ -86,7 +83,11 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < runs; i++)
     {
-        run(argc, argv);
+        printf("# # # # # Start run %d # # # # #\n", i);
+        run(argc, argv, edges, n, e);
+        printf("# # # # # End run %d # # # # #\n", i);
     }
+
+    free(edges);
     return 0;
 }

@@ -3,8 +3,17 @@
 #include "graphhelper.c"
 #include <sys/time.h>
 
+__global__ void bellmanford_init(int n, int* d_dist_data){
+    int src = blockIdx.x;
+    int* d_dist   = d_dist_data   + src * n;
 
-__device__ bool bellmanford_step(int n, int edge_count, Edge* d_edges, int* d_dist)
+    for (int i = threadIdx.x; i < n; i += blockDim.x)
+        d_dist[i]   = INT_MAX;
+
+    d_dist[src] = 0;
+}
+
+__device__ bool bellmanford_step(int edge_count, Edge* d_edges, int* d_dist)
 {
     bool changed = false;
     for (int i = 0; i < edge_count; i++)
@@ -20,30 +29,17 @@ __device__ bool bellmanford_step(int n, int edge_count, Edge* d_edges, int* d_di
 }
 __global__  void bellmanford_node(int n, int e, Edge* d_edges, int* d_dist_data)
 {
-    int src = threadIdx.x + blockIdx.x * blockDim.x;
-    int* d_dist = d_dist_data + src * n;
-    for (int i = 0; i < n; i++)
-        d_dist[i] = INT_MAX;
-    d_dist[src] = 0;
-
+    int src = blockIdx.x;
+    int* d_dist   = d_dist_data   + src * n;
     for (int i = 0; i < n-1; i++)
-       if (!bellmanford_step(n, e, d_edges, d_dist))
+       if (!bellmanford_step(e, d_edges, d_dist))
            break;
-    if (bellmanford_step(n, e, d_edges, d_dist))
+    if (bellmanford_step(e, d_edges, d_dist))
         printf("There is a negative cycle\n");
 }
 
-int run(int argc, char* argv[])
+int run(int argc, char* argv[], struct Edge* edges, int n, int e)
 {
-    if (argc < 2)
-    {
-        printf("Please add an argument for the graph file\n");
-        return 1;
-    }
-    // Read in the graph file
-    struct Edge* edges;
-    int n, e;
-    read_graph(argv[1], &edges, &n, &e);
 
     printf("Start - Allocate Memory\n");
     // Allocate memory for the distance array on host machine
@@ -74,6 +70,7 @@ int run(int argc, char* argv[])
     printf("End - Allocate dist data on device\n");
 
     printf("Start - parallel bellman ford\n");
+    bellmanford_init<<<1,n>>>(n, d_dist_data);
     bellmanford_node<<<1,n>>>(n, e, d_edges, d_dist_data);
     printf("End - parallel bellman ford\n");
 
@@ -112,12 +109,23 @@ int run(int argc, char* argv[])
     cudaFreeHost(dist_data);
     writeResults(n, e, elapsedTime, argc >= 3 ? argv[2] : "results_parallel_node.txt");
 
+
     return 0;
 }
 
 
 int main(int argc, char* argv[])
 {
+    if (argc < 2)
+    {
+        printf("Please add an argument for the graph file\n");
+        return 1;
+    }
+    // Read in the graph file
+    struct Edge* edges;
+    int n, e;
+    read_graph(argv[1], &edges, &n, &e);
+
     int runs = 0;
     if (argc == 3)
         runs = atoi(argv[2]);
@@ -127,7 +135,10 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < runs; i++)
     {
-        run(argc, argv);
+        printf("# # # # # Start run %d # # # # #\n", i);
+        run(argc, argv, edges, n, e);
+        printf("# # # # # End run %d # # # # #\n", i);
     }
+    free(edges);
     return 0;
 }
