@@ -52,8 +52,8 @@ int run(int argc, char* argv[], struct Edge* edges, int n, int e)
 
 
 	// Experimental check of parallel threads
-	int threads_e = (e < 256) ? e : 256;
-	int threads_n = (n < 256) ? n : 256;
+	int threads_e = argc >= 5 ? atoi(argv[4]) : (e < 256) ? e : 256;
+	int threads_n = argc >= 5 ? atoi(argv[4]) : (n < 256) ? n : 256;
 
 	// Meassure time with cuda
     cudaEvent_t start, stop;
@@ -113,7 +113,6 @@ int run(int argc, char* argv[], struct Edge* edges, int n, int e)
 
     cudaEventElapsedTime(&elapsedTime, start, stop);
     printf("Elapsed time : %f ms\n" ,elapsedTime);
-    // TODO: Stop Timing here
 
 	cudaFree(d_dist_data);
 	cudaFree(d_edges);

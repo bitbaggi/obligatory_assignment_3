@@ -13,10 +13,12 @@ int run(int argc, char* argv[], struct Edge* edges, int n, int e)
 {
     printf("Start - Allocate Memory\n");
     // Allocate memory for the distance array on host machine
-    int* dist_data = malloc(n * n * sizeof(int));
+    const size_t size = (size_t)n * (size_t)n;
+    int* dist_data = malloc(size * sizeof(int));
     int** dist = malloc(n * sizeof(int*));
     if (dist_data == NULL || dist == NULL)
     {
+        printf("Problem with allocating memory\n");
         free(dist_data);
         free(dist);
         return 0;
