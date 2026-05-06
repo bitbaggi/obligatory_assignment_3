@@ -25,7 +25,7 @@ def run_config(filename, n_nodes, e_edges):
 
 
 for i, j in product(
-        [10000, 20000, 30000, 40000, 50000],
-        range(100000, 1000001, 100000)
+        [100, 500, 1000, 2000, 5000],
+        range(100, 2000, 500)
 ):
     run_config("graph", i, j)
